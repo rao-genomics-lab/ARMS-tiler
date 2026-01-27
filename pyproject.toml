@@ -1,0 +1,86 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arms-tiling"
+version = "1.0.0"
+description = "ARMS Napari Tiling Application - Interactive tool for preprocessing tissue annotations for laser capture microdissection"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "Srinivasa Rao"}
+]
+keywords = [
+    "napari",
+    "tiling",
+    "laser capture microdissection",
+    "LCM",
+    "PALM",
+    "tissue annotation",
+    "whole slide imaging",
+    "pathology"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Image Processing",
+    "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+    "napari[all]>=0.4.18",
+    "openslide-python>=1.2.0",
+    "tifffile>=2023.1.0",
+    "scikit-image>=0.20.0",
+    "shapely>=2.0.0",
+    "geojson>=3.0.0",
+    "scipy>=1.10.0",
+    "magicgui>=0.7.0",
+    "qtpy>=2.3.0",
+    "opencv-python>=4.7.0",
+    "matplotlib>=3.7.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-qt>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/arms-tiling"
+Documentation = "https://github.com/yourusername/arms-tiling#readme"
+Repository = "https://github.com/yourusername/arms-tiling"
+Issues = "https://github.com/yourusername/arms-tiling/issues"
+
+[project.scripts]
+arms-tiling = "arms_tiling.app:main"
+
+[project.gui-scripts]
+arms-tiling-gui = "arms_tiling.app:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+arms_tiling = ["*.json"]
+
+[tool.black]
+line-length = 120
+target-version = ['py39', 'py310', 'py311', 'py312']
+
+[tool.isort]
+profile = "black"
+line_length = 120

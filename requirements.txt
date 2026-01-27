@@ -1,0 +1,22 @@
+# ARMS Tiling Application Requirements
+# Install with: pip install -r requirements.txt
+
+# Core napari and GUI
+napari[all]>=0.4.18
+magicgui>=0.7.0
+qtpy>=2.3.0
+
+# Image processing
+openslide-python>=1.2.0
+tifffile>=2023.1.0
+scikit-image>=0.20.0
+opencv-python>=4.7.0
+
+# Geometry and GeoJSON
+shapely>=2.0.0
+geojson>=3.0.0
+
+# Scientific computing
+scipy>=1.10.0
+numpy>=1.24.0
+matplotlib>=3.7.0
