@@ -1,4 +1,4 @@
-# ARMS Tiling Application Requirements
+# ARMS Tiler Requirements
 # Install with: pip install -r requirements.txt
 
 # Core napari and GUI

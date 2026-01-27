@@ -1,4 +1,4 @@
-# ARMS Tiling Application
+# ARMS Tiler
 
 An interactive napari-based desktop application for preprocessing tissue annotations for laser capture microdissection (LCM). The tool divides large tissue region annotations into smaller, manageable tiles suitable for LCM workflows.
 
@@ -35,15 +35,15 @@ brew install openslide
 ### Install from PyPI (when published)
 
 ```bash
-pip install arms-tiling
+pip install ARMS-tiler
 ```
 
 ### Install from source
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/arms-tiling.git
-cd arms-tiling
+git clone https://github.com/yourusername/ARMS-tiler.git
+cd ARMS-tiler
 
 # Install in development mode
 pip install -e .
@@ -65,20 +65,20 @@ pip install -r requirements.txt
 After installation, run the application from anywhere:
 
 ```bash
-arms-tiling
+ARMS-tiler
 ```
 
 ### Python
 
 ```python
-from arms_tiling import main
+from ARMS_tiler import main
 main()
 ```
 
 ### Direct Script Execution
 
 ```bash
-cd src/arms_tiling
+cd src/ARMS_tiler
 python app.py
 ```
 
@@ -207,6 +207,6 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 If you use this tool in your research, please cite:
 
 ```
-ARMS Tiling Application
-https://github.com/yourusername/arms-tiling
+ARMS Tiler
+https://github.com/yourusername/ARMS-tiler
 ```

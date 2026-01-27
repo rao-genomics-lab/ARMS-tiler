@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "arms-tiling"
+name = "ARMS-tiler"
 version = "1.0.0"
-description = "ARMS Napari Tiling Application - Interactive tool for preprocessing tissue annotations for laser capture microdissection"
+description = "ARMS Tiler - Interactive napari tool for preprocessing tissue annotations for laser capture microdissection"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.9"
@@ -60,22 +60,22 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/arms-tiling"
-Documentation = "https://github.com/yourusername/arms-tiling#readme"
-Repository = "https://github.com/yourusername/arms-tiling"
-Issues = "https://github.com/yourusername/arms-tiling/issues"
+Homepage = "https://github.com/yourusername/ARMS-tiler"
+Documentation = "https://github.com/yourusername/ARMS-tiler#readme"
+Repository = "https://github.com/yourusername/ARMS-tiler"
+Issues = "https://github.com/yourusername/ARMS-tiler/issues"
 
 [project.scripts]
-arms-tiling = "arms_tiling.app:main"
+ARMS-tiler = "ARMS_tiler.app:main"
 
 [project.gui-scripts]
-arms-tiling-gui = "arms_tiling.app:main"
+ARMS-tiler-gui = "ARMS_tiler.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-arms_tiling = ["*.json"]
+ARMS_tiler = ["*.json"]
 
 [tool.black]
 line-length = 120

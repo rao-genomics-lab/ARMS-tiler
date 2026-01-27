@@ -1,5 +1,5 @@
 """
-ARMS Tiling Application
+ARMS Tiler
 
 An interactive napari-based desktop application for preprocessing tissue
 annotations for laser capture microdissection (LCM).
