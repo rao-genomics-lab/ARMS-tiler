@@ -62,10 +62,10 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/ARMS-tiler"
-Documentation = "https://github.com/yourusername/ARMS-tiler#readme"
-Repository = "https://github.com/yourusername/ARMS-tiler"
-Issues = "https://github.com/yourusername/ARMS-tiler/issues"
+Homepage = "https://github.com/sraorao/ARMS-tiler"
+Documentation = "https://github.com/sraorao/ARMS-tiler#readme"
+Repository = "https://github.com/sraorao/ARMS-tiler"
+Issues = "https://github.com/sraorao/ARMS-tiler/issues"
 
 [project.scripts]
 ARMS-tiler = "ARMS_tiler.app:main"

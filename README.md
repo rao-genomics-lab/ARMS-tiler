@@ -42,7 +42,7 @@ pip install ARMS-tiler
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/ARMS-tiler.git
+git clone https://github.com/sraorao/ARMS-tiler.git
 cd ARMS-tiler
 
 # Install in development mode
@@ -211,5 +211,5 @@ If you use this tool in your research, please cite:
 
 ```
 ARMS Tiler
-https://github.com/yourusername/ARMS-tiler
+https://github.com/sraorao/ARMS-tiler
 ```
