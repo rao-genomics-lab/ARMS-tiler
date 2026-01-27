@@ -5,6 +5,7 @@
 napari[all]>=0.4.18
 magicgui>=0.7.0
 qtpy>=2.3.0
+pyqt5>=5.15.0
 
 # Image processing
 openslide-python>=1.2.0

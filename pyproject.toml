@@ -37,6 +37,7 @@ classifiers = [
 ]
 dependencies = [
     "napari[all]>=0.4.18",
+    "pyqt5>=5.15.0",
     "openslide-python>=1.2.0",
     "tifffile>=2023.1.0",
     "scikit-image>=0.20.0",
