@@ -60,27 +60,30 @@ pip install -r requirements.txt
 
 ## Usage
 
-### Command Line
-
-After installation, run the application from anywhere:
+### Command Line (after `pip install -e .`)
 
 ```bash
 ARMS-tiler
 ```
 
-### Python
+### As a Python Module
+
+```bash
+# From the repository root:
+python -m ARMS_tiler
+
+# Or from the src directory:
+cd src && python -m ARMS_tiler
+```
+
+### From Python
 
 ```python
 from ARMS_tiler import main
 main()
 ```
 
-### Direct Script Execution
-
-```bash
-cd src/ARMS_tiler
-python app.py
-```
+**Note**: Do not run `python app.py` directly - it will fail due to relative imports. Use one of the methods above.
 
 ## Workflow
 
