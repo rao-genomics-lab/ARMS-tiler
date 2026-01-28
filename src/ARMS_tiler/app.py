@@ -771,15 +771,20 @@ def select_warp_matrix_gui(warp_type: str = 'Default'):
               'label': 'Pad minitiles', 'widget_type': 'Checkbox', 'value': True,
               'tooltip': 'Add tiny placeholder dots to ensure uniform minitile count per tile (for PALM well mapping).'
           })
-def apply_splitting(viewer: napari.Viewer, layer: napari.layers.Shapes, num_tiles: int = 0, tile_size: float = 500.0, gap_size: float = 50.0,
+def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float = 500.0, gap_size: float = 50.0,
                     num_points: int = 700, max_size: float = 130.0, min_area: float = 50000.0,
                     randomize_objects: bool = False, bias_to_small: bool = False, keep_names: bool = True,
                     tile_type: str = "Directly to minitiles", pixel_size: float = 0.2627, pad_minitiles: bool = True):
 
     global global_scaling_factor, global_extract_level, global_warp_matrix
     scaling_factor = global_scaling_factor
-    if layer is None or not layer.data:
-         print("No shapes layer selected or layer is empty.")
+
+    # Get the Annotations layer directly from viewer (required for tabbed GUI)
+    layer = None
+    if 'Annotations' in viewer.layers:
+        layer = viewer.layers['Annotations']
+    if layer is None or not isinstance(layer, napari.layers.Shapes) or not layer.data:
+         print("No 'Annotations' shapes layer found or layer is empty. Load annotations first.")
          return
 
     # Account for pyramid level: effective pixel size = pixel_size * 4^level
