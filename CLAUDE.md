@@ -15,8 +15,6 @@ pip install -e .
 # Or with dev dependencies (black, isort, flake8, pytest)
 pip install -e ".[dev]"
 
-# System dependency required: openslide-tools (apt), openslide (brew), or openslide.org (Windows)
-
 # Run via entry point
 ARMS-tiler
 
