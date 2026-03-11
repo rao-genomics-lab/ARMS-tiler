@@ -49,6 +49,50 @@ GLASBEY_COLORS = [
     '#aaffc3', '#808000', '#ffd8b1', '#000075', '#808080'
 ]
 
+def parse_source_points_tsv(file_path):
+    """Read a TSV file with x/y header and return the first 3 data rows as np.float32 array of shape (3, 2)."""
+    points = []
+    with open(file_path, "r") as f:
+        header = f.readline()  # skip header
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            parts = line.split("\t")
+            points.append([float(parts[0]), float(parts[1])])
+            if len(points) == 3:
+                break
+    if len(points) != 3:
+        raise ValueError(f"Expected 3 coordinate pairs, found {len(points)}")
+    return np.array(points, dtype=np.float32)
+
+
+def parse_palm_destination_points(file_path):
+    """Read a PALM element file and extract coordinates from lines starting with '.\\t'.
+
+    Expected format: '.\\t97817.1,54024.0'
+    Returns first 3 coordinates as np.float32 array of shape (3, 2).
+    """
+    points = []
+    with open(file_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith(".\t"):
+                coord_str = line.split("\t")[1]
+                x, y = coord_str.split(",")
+                points.append([float(x), float(y)])
+                if len(points) == 3:
+                    break
+    if len(points) != 3:
+        raise ValueError(f"Expected 3 coordinate pairs from '.' lines, found {len(points)}")
+    return np.array(points, dtype=np.float32)
+
+
+def compute_affine_from_points(src_pts, dst_pts):
+    """Compute a 2x3 affine transformation matrix from 3 source and 3 destination points."""
+    return cv2.getAffineTransform(src_pts, dst_pts)
+
+
 def calculate_caliper(polygon):
     """Calculate caliper (longest dimension) using minimum rotated rectangle."""
     try:
@@ -682,14 +726,14 @@ def visualize_palm_shapes(viewer, geojson_path, warp_mat, tile_type):
     call_button='Apply Warp Matrix',
     warp_type={
         'label': 'Warp Matrix',
-        'choices': ['Default', 'Identity', 'Custom (load file)'],
+        'choices': ['Default', 'Identity', 'Custom (load file)', 'Compute from points'],
         'value': 'Default',
-        'tooltip': 'Default: Standard slide-to-PALM transform. Identity: No transform. Custom: Load from file.'
+        'tooltip': 'Default: Standard slide-to-PALM transform. Identity: No transform. Custom: Load from file. Compute from points: Calculate from source TSV and PALM destination files.'
     }
 )
 def select_warp_matrix_gui(warp_type: str = 'Default'):
     """Select warp matrix type for PALM coordinate transformation."""
-    global global_warp_matrix
+    global global_warp_matrix, global_last_directory
 
     if warp_type == 'Default':
         global_warp_matrix = DEFAULT_WARP_MATRIX.copy()
@@ -697,12 +741,14 @@ def select_warp_matrix_gui(warp_type: str = 'Default'):
     elif warp_type == 'Identity':
         global_warp_matrix = IDENTITY_WARP_MATRIX.copy()
         print("Using identity matrix (no transformation)")
-    else:  # Custom
+    elif warp_type == 'Custom (load file)':
+        start_dir = global_last_directory or ''
         file_path, _ = QFileDialog.getOpenFileName(
-            None, 'Select Warp Matrix File', '',
+            None, 'Select Warp Matrix File', start_dir,
             'Numpy Files (*.npy);;Text Files (*.txt);;All Files (*)'
         )
         if file_path:
+            global_last_directory = os.path.dirname(file_path)
             try:
                 if file_path.endswith('.npy'):
                     global_warp_matrix = np.load(file_path)
@@ -717,6 +763,47 @@ def select_warp_matrix_gui(warp_type: str = 'Default'):
                 global_warp_matrix = DEFAULT_WARP_MATRIX.copy()
         else:
             print("No file selected, keeping previous matrix")
+    elif warp_type == 'Compute from points':
+        start_dir = global_last_directory or ''
+        src_path, _ = QFileDialog.getOpenFileName(
+            None, 'Select Source Points TSV File', start_dir,
+            'TSV Files (*.tsv);;Text Files (*.txt);;All Files (*)'
+        )
+        if not src_path:
+            print("No source file selected, keeping previous matrix")
+            return
+        global_last_directory = os.path.dirname(src_path)
+
+        dst_path, _ = QFileDialog.getOpenFileName(
+            None, 'Select PALM Destination Points File', global_last_directory,
+            'All Files (*);;Text Files (*.txt)'
+        )
+        if not dst_path:
+            print("No destination file selected, keeping previous matrix")
+            return
+
+        try:
+            src_pts = parse_source_points_tsv(src_path)
+            dst_pts = parse_palm_destination_points(dst_path)
+            matrix = compute_affine_from_points(src_pts, dst_pts)
+
+            global_warp_matrix = matrix
+            print(f"Source points:\n{src_pts}")
+            print(f"Destination points:\n{dst_pts}")
+            print(f"Computed warp matrix:\n{matrix}")
+
+            # Auto-save the computed matrix alongside the source file
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            save_dir = os.path.dirname(src_path)
+            npy_path = os.path.join(save_dir, f"warp_matrix_{timestamp}.npy")
+            txt_path = os.path.join(save_dir, f"warp_matrix_{timestamp}.txt")
+            np.save(npy_path, matrix)
+            np.savetxt(txt_path, matrix)
+            print(f"Saved computed matrix to:\n  {npy_path}\n  {txt_path}")
+        except Exception as e:
+            print(f"Error computing warp matrix: {e}")
+            global_warp_matrix = DEFAULT_WARP_MATRIX.copy()
+            print("Falling back to default warp matrix")
 
 
 # Modified apply_splitting to include scaling_factor and tooltips
