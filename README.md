@@ -181,6 +181,39 @@ The application follows a three-stage workflow:
 | 40× | ~0.25 µm/px |
 | 60× | ~0.17 µm/px |
 
+## Troubleshooting
+
+### Qt platform plugin error on Linux
+
+If you see errors like:
+
+```
+Could not load the Qt platform plugin "xcb" even though it was found.
+```
+or:
+```
+This application failed to start because no Qt platform plugin could be initialized.
+```
+
+This is usually caused by `opencv-python` bundling its own Qt libraries which conflict with napari's Qt. Try these fixes in order:
+
+1. **Replace `opencv-python` with `opencv-python-headless`** (most common fix):
+   ```bash
+   pip uninstall opencv-python && pip install opencv-python-headless
+   ```
+
+2. **Install missing system XCB libraries**:
+   ```bash
+   sudo apt install libxcb-xinerama0 libxcb-cursor0
+   ```
+
+3. **Force Qt to use the system XCB plugin** (if the above don't help):
+   ```bash
+   export QT_QPA_PLATFORM_PLUGIN_PATH=/usr/lib/x86_64-linux-gnu/qt5/plugins/platforms
+   ```
+
+You can run `QT_DEBUG_PLUGINS=1 ARMS-tiler` to get detailed diagnostics if the issue persists.
+
 ## Development
 
 ### Running Tests

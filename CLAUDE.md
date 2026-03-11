@@ -26,7 +26,7 @@ python -m ARMS_tiler
 
 **Do not run `python src/ARMS_tiler/app.py` directly** - it will fail due to relative imports.
 
-**Note**: `requirements.txt` uses `opencv-python-headless` (preferred for headless/CI); `pyproject.toml` uses `opencv-python`. Use headless variant when not needing GUI from opencv.
+**Note**: Both `requirements.txt` and `pyproject.toml` use `opencv-python-headless` to avoid Qt conflicts with napari. Do not use `opencv-python` as its bundled Qt will conflict with napari's Qt platform plugins.
 
 ## Code Formatting
 
