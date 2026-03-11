@@ -17,21 +17,6 @@ An interactive napari-based desktop application for preprocessing tissue annotat
 
 ## Installation
 
-### Prerequisites
-
-**System Dependencies** (OpenSlide library):
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install openslide-tools
-
-# macOS
-brew install openslide
-
-# Windows
-# Download from https://openslide.org/download/
-```
-
 ### Install from PyPI (when published)
 
 ```bash
