@@ -813,7 +813,7 @@ def select_warp_matrix_gui(warp_type: str = 'Default'):
               'tooltip': 'Maximum number of tiles to output. 0 = unlimited.'
           },
           tile_size={
-              'label': 'Tile size (µm)', 'min': 1, 'max': 10000,
+              'label': 'Tile size (µm)', 'min': 1, 'max': 999000,
               'tooltip': 'Size of each tile in micrometers for Square/Hexagonal tiling.'
           },
           gap_size={
