@@ -504,6 +504,86 @@ def split_voronoi(polygon, num_points=100, gap_size=0, original_name="annotation
     return tiles, tile_names
 
 
+def split_equal_area(polygon, n, gap_size=0, original_name="annotation", n_iterations=20):
+    """Divide polygon into n roughly equal-area tiles using Lloyd's algorithm (centroidal Voronoi tessellation)."""
+    min_x, min_y, max_x, max_y = polygon.bounds
+
+    # Seed n random points inside the polygon bounding box, keeping only those inside the polygon
+    rng = np.random.default_rng()
+    points = []
+    for _ in range(n * 200):
+        if len(points) >= n:
+            break
+        pt = Point(rng.uniform(min_x, max_x), rng.uniform(min_y, max_y))
+        if polygon.contains(pt):
+            points.append([pt.x, pt.y])
+    if len(points) < 2:
+        return [], []
+    points = np.array(points[:n])
+
+    def compute_clipped_regions(pts):
+        # Mirror points beyond each boundary edge so that Voronoi regions near edges are bounded
+        mirrored = np.vstack([
+            pts,
+            np.column_stack([2 * min_x - pts[:, 0], pts[:, 1]]),
+            np.column_stack([2 * max_x - pts[:, 0], pts[:, 1]]),
+            np.column_stack([pts[:, 0], 2 * min_y - pts[:, 1]]),
+            np.column_stack([pts[:, 0], 2 * max_y - pts[:, 1]]),
+        ])
+        vor = Voronoi(mirrored)
+        regions = []
+        for i in range(len(pts)):
+            region_idx = vor.point_region[i]
+            region = vor.regions[region_idx]
+            if -1 in region or len(region) == 0:
+                regions.append(None)
+                continue
+            region_coords = vor.vertices[region]
+            try:
+                region_poly = Polygon(region_coords).intersection(polygon)
+                regions.append(region_poly if region_poly.is_valid and not region_poly.is_empty else None)
+            except Exception:
+                regions.append(None)
+        return regions
+
+    # Lloyd's iterations: move each seed to the centroid of its Voronoi region
+    for _ in range(n_iterations):
+        regions = compute_clipped_regions(points)
+        new_points = []
+        for i, region in enumerate(regions):
+            if region is not None and not region.is_empty:
+                c = region.centroid
+                new_points.append([c.x, c.y])
+            else:
+                new_points.append(points[i])
+        points = np.array(new_points)
+
+    # Build final tiles from converged regions
+    final_regions = compute_clipped_regions(points)
+    tiles, tile_names = [], []
+    digits = get_digits_for_formatting(len(final_regions))
+    idx = 1
+    for region in final_regions:
+        if region is None or region.is_empty:
+            continue
+        if gap_size > 0:
+            region = region.buffer(-gap_size / 2)
+            if region is None or region.is_empty:
+                continue
+        region = region.buffer(0)
+        if isinstance(region, MultiPolygon):
+            for part in region.geoms:
+                if not part.is_empty:
+                    tiles.append(part)
+                    tile_names.append(f"{original_name}_{idx:0{digits}d}")
+                    idx += 1
+        elif not region.is_empty:
+            tiles.append(region)
+            tile_names.append(f"{original_name}_{idx:0{digits}d}")
+            idx += 1
+    return tiles, tile_names
+
+
 # Modified save_geojson to accept and use scaling_factor
 def save_geojson(shapes, shape_names, min_area, scaling_factor, randomize=False, bias_to_small=False, parent_areas=None):
     global global_last_directory
@@ -821,8 +901,8 @@ def select_warp_matrix_gui(warp_type: str = 'Default'):
               'tooltip': 'Space between tiles in micrometers. Prevents overlap during laser capture.'
           },
           num_points={
-              'label': 'Voronoi points', 'min': 4, 'max': 10000,
-              'tooltip': 'Number of seed points for Voronoi tessellation.'
+              'label': 'N tiles (Voronoi / Equal Area)', 'min': 4, 'max': 10000,
+              'tooltip': 'Number of seed points for Voronoi tessellation, or target number of tiles for Equal Area mode.'
           },
           max_size={
               'label': 'Max caliper size (µm)', 'min': 1, 'max': 10000,
@@ -850,9 +930,9 @@ def select_warp_matrix_gui(warp_type: str = 'Default'):
           },
           tile_type={
               'label': 'Tile type',
-              'choices': ['Square', 'Hexagonal', 'Voronoi', 'Divide into 4', 'Directly to minitiles'],
+              'choices': ['Square', 'Hexagonal', 'Voronoi', 'Equal Area', 'Divide into 4', 'Directly to minitiles'],
               'value': 'Directly to minitiles',
-              'tooltip': 'Square: Grid. Hexagonal: Honeycomb. Voronoi: Random tessellation. Divide into 4: Quadrants. Directly to minitiles: Grid then quadrants.'
+              'tooltip': 'Square: Grid. Hexagonal: Honeycomb. Voronoi: Random tessellation. Equal Area: N roughly equal-area tiles via Lloyd\'s algorithm. Divide into 4: Quadrants. Directly to minitiles: Grid then quadrants.'
           },
           pad_minitiles={
               'label': 'Pad minitiles', 'widget_type': 'Checkbox', 'value': True,
@@ -944,6 +1024,10 @@ def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float 
                  if tile_type == "Voronoi":
                      tiles, tile_names = split_voronoi(polygon, num_points=num_points, gap_size=gap_size_px, original_name=original_name)
                      tiles_is_fake = [False] * len(tiles)  # No fake tiles for Voronoi
+                     split_occurred = True
+                 elif tile_type == "Equal Area":
+                     tiles, tile_names = split_equal_area(polygon, n=num_points, gap_size=gap_size_px, original_name=original_name)
+                     tiles_is_fake = [False] * len(tiles)
                      split_occurred = True
                  elif tile_type == "Divide into 4":
                      tiles, tile_names, tiles_is_fake = divide_into_four(polygon, gap_size_px, min_area_px, original_name, pad_to_expected=pad_minitiles)
