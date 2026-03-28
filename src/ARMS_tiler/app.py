@@ -1,6 +1,6 @@
 import napari
 import geojson
-from shapely.geometry import shape, Polygon, MultiPolygon, mapping
+from shapely.geometry import shape, Polygon, MultiPolygon, Point, mapping
 from shapely import is_valid
 import openslide
 import numpy as np
