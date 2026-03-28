@@ -549,8 +549,32 @@ def split_equal_area(polygon, n, gap_size=0, original_name="annotation", n_itera
                 new_seeds[i] = samples[mask].mean(axis=0)
         seeds = new_seeds
 
-    # Build final tiles from converged regions
-    final_regions = compute_clipped_regions(points)
+    # Build Voronoi regions from converged seeds and clip to polygon
+    def compute_clipped_regions(pts):
+        mirrored = np.vstack([
+            pts,
+            np.column_stack([2 * min_x - pts[:, 0], pts[:, 1]]),
+            np.column_stack([2 * max_x - pts[:, 0], pts[:, 1]]),
+            np.column_stack([pts[:, 0], 2 * min_y - pts[:, 1]]),
+            np.column_stack([pts[:, 0], 2 * max_y - pts[:, 1]]),
+        ])
+        vor = Voronoi(mirrored)
+        regions = []
+        for i in range(len(pts)):
+            region_idx = vor.point_region[i]
+            region = vor.regions[region_idx]
+            if -1 in region or len(region) == 0:
+                regions.append(None)
+                continue
+            region_coords = vor.vertices[region]
+            try:
+                region_poly = Polygon(region_coords).intersection(polygon)
+                regions.append(region_poly if region_poly.is_valid and not region_poly.is_empty else None)
+            except Exception:
+                regions.append(None)
+        return regions
+
+    final_regions = compute_clipped_regions(seeds)
     tiles, tile_names = [], []
     digits = get_digits_for_formatting(len(final_regions))
     idx = 1
