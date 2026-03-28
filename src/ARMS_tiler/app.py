@@ -937,11 +937,16 @@ def select_warp_matrix_gui(warp_type: str = 'Default'):
           pad_minitiles={
               'label': 'Pad minitiles', 'widget_type': 'Checkbox', 'value': True,
               'tooltip': 'Add tiny placeholder dots to ensure uniform minitile count per tile (for PALM well mapping).'
+          },
+          equal_area_iterations={
+              'label': 'Equal Area iterations', 'min': 1, 'max': 200, 'value': 20,
+              'tooltip': 'Number of Lloyd\'s algorithm iterations for Equal Area tiling. More iterations = more uniform areas but slower.'
           })
 def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float = 500.0, gap_size: float = 50.0,
                     num_points: int = 700, max_size: float = 130.0, min_area: float = 50000.0,
                     randomize_objects: bool = False, bias_to_small: bool = False, keep_names: bool = True,
-                    tile_type: str = "Directly to minitiles", pixel_size: float = 0.2627, pad_minitiles: bool = True):
+                    tile_type: str = "Directly to minitiles", pixel_size: float = 0.2627, pad_minitiles: bool = True,
+                    equal_area_iterations: int = 20):
 
     global global_scaling_factor, global_extract_level, global_warp_matrix
     scaling_factor = global_scaling_factor
@@ -1026,7 +1031,7 @@ def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float 
                      tiles_is_fake = [False] * len(tiles)  # No fake tiles for Voronoi
                      split_occurred = True
                  elif tile_type == "Equal Area":
-                     tiles, tile_names = split_equal_area(polygon, n=num_points, gap_size=gap_size_px, original_name=original_name)
+                     tiles, tile_names = split_equal_area(polygon, n=num_points, gap_size=gap_size_px, original_name=original_name, n_iterations=equal_area_iterations)
                      tiles_is_fake = [False] * len(tiles)
                      split_occurred = True
                  elif tile_type == "Divide into 4":
