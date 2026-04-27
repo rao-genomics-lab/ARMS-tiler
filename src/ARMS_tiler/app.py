@@ -721,8 +721,9 @@ def save_palm_text(geojson_path, warp_mat=None):
 
 def visualize_palm_shapes(viewer, geojson_path, warp_mat, tile_type):
     """
-    Save a PNG visualization of transformed PALM coordinates and add preview layer to viewer.
-    Color-codes minitiles by parent tile using glasbey palette.
+    Save two PNG visualizations of transformed PALM coordinates and add preview layer to viewer.
+    - _PALM_preview_parent.png: color-codes shapes by parent tile (glasbey palette)
+    - _PALM_preview_order.png: color-codes shapes by output order (viridis — blue=first, yellow=last)
     """
     import matplotlib.pyplot as plt
     from matplotlib.patches import Polygon as MplPolygon
@@ -735,27 +736,27 @@ def visualize_palm_shapes(viewer, geojson_path, warp_mat, tile_type):
         print("No features to visualize")
         return None
 
-    # Build parent-to-color mapping for minitiles
     parent_colors = {}
     color_cycle = cycle(GLASBEY_COLORS)
 
-    patches = []
-    colors = []
+    patches_parent = []
+    patches_order = []
+    colors_parent = []
+    colors_order = []
     shapes = []
-    edge_colors = []
+    edge_colors_parent = []
     names = []
+    n = len(features)
 
-    for feature in features:
+    for idx, feature in enumerate(features):
         coords = feature['geometry']['coordinates'][0]
         name = feature['properties'].get('name', '')
 
-        # Transform coordinates
         coords_np = np.float32(coords)
         transformed = cv2.transform(coords_np[None, :, :], warp_mat)[0]
 
-        # Determine parent tile for color assignment
+        # Parent-tile color (glasbey palette)
         if tile_type == "Directly to minitiles":
-            # Extract parent from name (e.g., "cell_0001_0002" -> "cell_0001")
             parts = name.split('_')
             if len(parts) >= 2 and parts[-1].isdigit() and parts[-2].isdigit():
                 parent = '_'.join(parts[:-1])
@@ -766,39 +767,65 @@ def visualize_palm_shapes(viewer, geojson_path, warp_mat, tile_type):
 
         if parent not in parent_colors:
             parent_colors[parent] = next(color_cycle)
+        c_parent = parent_colors[parent]
 
-        # For matplotlib PNG
-        polygon = MplPolygon(transformed, closed=True)
-        patches.append(polygon)
-        colors.append(parent_colors[parent])
+        # Output-order color (viridis)
+        t = idx / max(n - 1, 1)
+        c_order = plt.cm.viridis(t)[:3]
 
-        # For napari layer
+        patches_parent.append(MplPolygon(transformed, closed=True))
+        colors_parent.append(c_parent)
+        patches_order.append(MplPolygon(transformed, closed=True))
+        colors_order.append(c_order)
+
         shapes.append(transformed)
-        edge_colors.append(parent_colors[parent])
+        edge_colors_parent.append(c_parent)
         names.append(name)
 
-    # === Save PNG visualization ===
-    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+    base_path = geojson_path.rsplit('.', 1)[0]
 
-    for patch, color in zip(patches, colors):
+    # === PNG 1: colored by parent tile ===
+    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+    for patch, color in zip(patches_parent, colors_parent):
         patch.set_edgecolor(color)
         patch.set_facecolor('none')
         patch.set_linewidth(1)
         ax.add_patch(patch)
-
     ax.autoscale()
     ax.set_aspect('equal')
     ax.set_xlabel('PALM X coordinate')
     ax.set_ylabel('PALM Y coordinate')
-    ax.set_title(f'PALM Preview - {len(features)} shapes ({len(parent_colors)} parent regions)')
+    ax.set_title(f'PALM Preview: parent tile — {n} shapes ({len(parent_colors)} parent regions)')
     ax.grid(True, alpha=0.3)
-
-    png_path = geojson_path.rsplit('.', 1)[0] + '_PALM_preview.png'
-    plt.savefig(png_path, dpi=150, bbox_inches='tight', facecolor='white')
+    fig.text(0.5, 0.01, 'Color = parent tile (each tile has a distinct color)', ha='center', fontsize=9, style='italic')
+    png_parent = base_path + '_PALM_preview_parent.png'
+    plt.savefig(png_parent, dpi=150, bbox_inches='tight', facecolor='white')
     plt.close(fig)
-    print(f"Saved PALM preview: {png_path}")
+    print(f"Saved PALM preview (parent): {png_parent}")
 
-    # === Add napari preview layer ===
+    # === PNG 2: colored by output order ===
+    fig, ax = plt.subplots(1, 1, figsize=(12, 10))
+    for patch, color in zip(patches_order, colors_order):
+        patch.set_edgecolor(color)
+        patch.set_facecolor('none')
+        patch.set_linewidth(1)
+        ax.add_patch(patch)
+    ax.autoscale()
+    ax.set_aspect('equal')
+    ax.set_xlabel('PALM X coordinate')
+    ax.set_ylabel('PALM Y coordinate')
+    ax.set_title(f'PALM Preview: output order — {n} shapes')
+    ax.grid(True, alpha=0.3)
+    sm = plt.cm.ScalarMappable(cmap='viridis', norm=plt.Normalize(vmin=0, vmax=n - 1))
+    sm.set_array([])
+    plt.colorbar(sm, ax=ax, label='Output index (0 = first in file)')
+    fig.text(0.5, 0.01, 'Color = output order: blue (first) → yellow (last in output file)', ha='center', fontsize=9, style='italic')
+    png_order = base_path + '_PALM_preview_order.png'
+    plt.savefig(png_order, dpi=150, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print(f"Saved PALM preview (order): {png_order}")
+
+    # === Add napari preview layer (parent-tile coloring) ===
     if 'PALM Preview' in viewer.layers:
         viewer.layers.remove('PALM Preview')
 
@@ -807,14 +834,14 @@ def visualize_palm_shapes(viewer, geojson_path, warp_mat, tile_type):
             shapes,
             name='PALM Preview',
             shape_type='polygon',
-            edge_color=edge_colors,
+            edge_color=edge_colors_parent,
             face_color=[0, 0, 0, 0],
             edge_width=2
         )
         layer.annotation_names = names
         print(f"Added PALM Preview layer with {len(shapes)} shapes")
 
-    return png_path
+    return png_parent
 
 
 @magicgui(
@@ -1002,6 +1029,7 @@ def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float 
     new_shapes = []
     new_shape_names = []
     parent_areas = []  # Store the area of the parent polygon for each tile
+    all_stage1_tiles = []  # (tile, tile_name, parent_area) for "Directly to minitiles" — shuffled then split after main loop
     
     # Get original annotation names (if available) or create default ones
     original_names = getattr(layer, 'annotation_names', [f'annotation_{i}' for i in range(len(layer.data))])
@@ -1061,68 +1089,12 @@ def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float 
                      tiles_is_fake = [False] * len(tiles)  # No fake tiles for Hexagonal
                      split_occurred = True
                  elif tile_type == "Directly to minitiles":
-                     # Stage 1: Split with Square tiling
+                     # Stage 1: collect intermediate tiles; Stage 2 (minitile splitting) runs
+                     # after the main loop so tile-level randomization can happen between stages
                      intermediate_tiles, intermediate_names = split_polygon(polygon, tile_size_px, gap_size_px, original_name)
-
-                     # Stage 2: Subdivide each tile into minitiles
-                     tiles = []
-                     tile_names = []
-                     tiles_is_fake = []  # Track which minitiles are fake padding
-                     half_gap = gap_size_px / 2
-
-                     # Threshold: 500µm in pixels
-                     threshold_px = 500.0 / effective_pixel_size
-                     # Max minitile size: 300µm in pixels
-                     max_minitile_px = 300.0 / effective_pixel_size
-
-                     # Calculate TARGET minitile count based on FULL tile size (not edge tiles)
-                     # This ensures uniform count for PALM well mapping
-                     if tile_size_px <= threshold_px:
-                         target_minitile_count = 4  # 2x2 grid
-                     else:
-                         target_cols = max(2, int(np.ceil((tile_size_px + half_gap) / (max_minitile_px + half_gap))))
-                         target_rows = target_cols  # Square grid
-                         target_minitile_count = target_cols * target_rows
-
-                     for tile, tile_name in zip(intermediate_tiles, intermediate_names):
-                         if tile_size_px <= threshold_px:
-                             # Small tiles: divide into 4 quadrants (current behavior)
-                             mini_tiles, mini_names, mini_is_fake = divide_into_four(tile, half_gap, min_area_px, tile_name, pad_to_expected=False)
-                         else:
-                             # Large tiles: calculate grid dimensions so no minitile exceeds 300µm
-                             # Formula accounts for gaps: N = ceil((total + gap) / (max_size + gap))
-                             tile_bounds = tile.bounds
-                             tile_width = tile_bounds[2] - tile_bounds[0]
-                             tile_height = tile_bounds[3] - tile_bounds[1]
-
-                             num_cols = max(2, int(np.ceil((tile_width + half_gap) / (max_minitile_px + half_gap))))
-                             num_rows = max(2, int(np.ceil((tile_height + half_gap) / (max_minitile_px + half_gap))))
-
-                             mini_tiles, mini_names, mini_is_fake = divide_into_grid(tile, num_cols, num_rows, half_gap, min_area_px, tile_name, pad_to_expected=False)
-
-                         # Pad to TARGET count (based on full tile size) for uniform PALM well mapping
-                         if pad_minitiles and 0 < len(mini_tiles) < target_minitile_count:
-                             num_needed = target_minitile_count - len(mini_tiles)
-                             reference_part = mini_tiles[0]
-                             centroid = reference_part.centroid
-                             fake_radius = 1.0
-                             fake_minitile = centroid.buffer(fake_radius)
-                             digits = get_digits_for_formatting(target_minitile_count)
-                             current_idx = len(mini_tiles)
-
-                             print(f"Padding '{tile_name}': {len(mini_tiles)} -> {target_minitile_count} minitiles (+{num_needed} fake)")
-
-                             for _ in range(num_needed):
-                                 mini_tiles.append(fake_minitile)
-                                 mini_names.append(f"{tile_name}_{current_idx:0{digits}d}")
-                                 mini_is_fake.append(True)
-                                 current_idx += 1
-
-                         tiles.extend(mini_tiles)
-                         tile_names.extend(mini_names)
-                         tiles_is_fake.extend(mini_is_fake)
-
-                     split_occurred = True
+                     for int_tile, int_name in zip(intermediate_tiles, intermediate_names):
+                         all_stage1_tiles.append((int_tile, int_name, parent_area))
+                     continue  # skip split_occurred handling; Stage 2 appends to new_shapes post-loop
 
                  if split_occurred and tiles: # Only add if splitting happened and resulted in tiles
                     # Filter by min_area, but always keep fake padding tiles
@@ -1154,6 +1126,56 @@ def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float 
              print(f"Error processing shape {i} ('{original_name}'): {e}")
              continue # Skip to the next shape
 
+    # "Directly to minitiles" Stage 2: optionally shuffle at tile level, then subdivide into minitiles
+    if tile_type == "Directly to minitiles" and all_stage1_tiles:
+        if randomize_objects:
+            if bias_to_small:
+                tile_parent_areas = [pa for _, _, pa in all_stage1_tiles]
+                random_weights = [random.random() * (1 / a if a > 0 else 1) for a in tile_parent_areas]
+                all_stage1_tiles = [x for _, x in sorted(zip(random_weights, all_stage1_tiles), reverse=True)]
+            else:
+                random.shuffle(all_stage1_tiles)
+
+        half_gap = gap_size_px / 2
+        threshold_px = 500.0 / effective_pixel_size
+        max_minitile_px = 300.0 / effective_pixel_size
+
+        if tile_size_px <= threshold_px:
+            target_minitile_count = 4
+        else:
+            target_cols = max(2, int(np.ceil((tile_size_px + half_gap) / (max_minitile_px + half_gap))))
+            target_rows = target_cols
+            target_minitile_count = target_cols * target_rows
+
+        for s1_tile, s1_name, s1_parent_area in all_stage1_tiles:
+            if tile_size_px <= threshold_px:
+                mini_tiles, mini_names, mini_is_fake = divide_into_four(s1_tile, half_gap, min_area_px, s1_name, pad_to_expected=False)
+            else:
+                tb = s1_tile.bounds
+                num_cols = max(2, int(np.ceil((tb[2] - tb[0] + half_gap) / (max_minitile_px + half_gap))))
+                num_rows = max(2, int(np.ceil((tb[3] - tb[1] + half_gap) / (max_minitile_px + half_gap))))
+                mini_tiles, mini_names, mini_is_fake = divide_into_grid(s1_tile, num_cols, num_rows, half_gap, min_area_px, s1_name, pad_to_expected=False)
+
+            if pad_minitiles and 0 < len(mini_tiles) < target_minitile_count:
+                num_needed = target_minitile_count - len(mini_tiles)
+                reference_part = mini_tiles[0]
+                centroid = reference_part.centroid
+                fake_minitile = centroid.buffer(1.0)
+                digits = get_digits_for_formatting(target_minitile_count)
+                current_idx = len(mini_tiles)
+                print(f"Padding '{s1_name}': {len(mini_tiles)} -> {target_minitile_count} minitiles (+{num_needed} fake)")
+                for _ in range(num_needed):
+                    mini_tiles.append(fake_minitile)
+                    mini_names.append(f"{s1_name}_{current_idx:0{digits}d}")
+                    mini_is_fake.append(True)
+                    current_idx += 1
+
+            for mt, mn, mf in zip(mini_tiles, mini_names, mini_is_fake):
+                if mt.area >= min_area_px or mf:
+                    new_shapes.append(np.array(mt.exterior.coords))
+                    new_shape_names.append(mn)
+                    parent_areas.append(s1_parent_area)
+
     if not new_shapes:
          print("No shapes left after processing and filtering. Layer will be empty.")
          layer.data = []
@@ -1171,7 +1193,9 @@ def apply_splitting(viewer: napari.Viewer, num_tiles: int = 0, tile_size: float 
          layer.parent_areas = parent_areas  # Store parent areas as a property of the layer
     
     # Pass scaling_factor to save functions
-    geojson_path = save_geojson(new_shapes, new_shape_names, 0, scaling_factor, randomize_objects, bias_to_small, parent_areas) # Min area filter applied above, pass 0 here
+    # For "Directly to minitiles", tile-level randomization already happened before Stage 2; don't shuffle again
+    effective_randomize = False if tile_type == "Directly to minitiles" else randomize_objects
+    geojson_path = save_geojson(new_shapes, new_shape_names, 0, scaling_factor, effective_randomize, bias_to_small, parent_areas) # Min area filter applied above, pass 0 here
 
     # Save PALM text files and visualization alongside GeoJSON
     if geojson_path:
